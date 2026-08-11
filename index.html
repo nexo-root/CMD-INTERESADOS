@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>CMD — Interesados</title>
+<style>
+  /* ================================================================
+     CMD INTERESADOS — planilla de interesados por activo
+     Desktop: tabla estilo Excel · Celular: tarjetas compactas
+     Para AGREGAR UN ACTIVO nuevo: buscar "const ACTIVOS" en el script.
+     ================================================================ */
+  :root {
+    --verde: #1B5E20;
+    --verde-osc: #143f17;
+    --dorado: #D4AF37;
+    --fondo: #f2f3f0;
+    --tinta: #1f2419;
+    --gris: #667061;
+    --linea: #d7dad2;
+    --blanco: #ffffff;
+    --rojo: #a03325;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: 15px; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    background: var(--fondo);
+    color: var(--tinta);
+    min-height: 100vh;
+    padding-bottom: 48px;
+  }
+
+  header {
+    background: var(--verde);
+    color: var(--blanco);
+    padding: 14px 18px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 700; }
+  header h1 span { color: var(--dorado); }
+  header .sub { font-size: 0.75rem; opacity: 0.8; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 16px 12px; }
+
+  /* ---------- panel de carga ---------- */
+  .panel {
+    background: var(--blanco);
+    border: 1px solid var(--linea);
+    border-radius: 8px;
+    padding: 16px 14px;
+    margin-bottom: 16px;
+  }
+  .panel h2 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gris);
+    margin-bottom: 12px;
+  }
+  .grilla {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1.2fr 1.2fr;
+    gap: 10px;
+  }
+  .grilla .ancho2 { grid-column: span 2; }
+  .duo { display: grid; grid-template-columns: 130px 1fr; gap: 8px; }
+
+  .campo { display: flex; flex-direction: column; gap: 4px; }
+  .campo > span { font-size: 0.75rem; font-weight: 700; color: var(--gris); }
+  .campo > span b { color: var(--rojo); }
+  input, select, textarea {
+    font: inherit;
+    font-size: 1rem;       /* 16px+ evita el zoom automatico del iPhone */
+    padding: 12px 10px;
+    border: 1px solid var(--linea);
+    border-radius: 6px;
+    background: var(--blanco);
+    color: var(--tinta);
+    width: 100%;
+  }
+  input:focus, select:focus { outline: 2px solid var(--verde); border-color: var(--verde); }
+
+  .acciones-panel { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 13px 22px;
+    border-radius: 6px;
+    border: 1px solid var(--verde);
+    background: var(--verde);
+    color: var(--blanco);
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--verde-osc); }
+  .btn.secundario { background: var(--blanco); color: var(--verde); }
+  .btn.secundario:hover { background: #eef2ec; }
+  .btn.peligro { background: var(--blanco); color: var(--rojo); border-color: var(--rojo); }
+  .btn.peligro:hover { background: #fbf1ef; }
+
+  .confirmacion {
+    display: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--verde);
+  }
+
+  /* ---------- barra de la tabla ---------- */
+  .barra {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .barra input[type=text] { max-width: 260px; }
+  .barra select { max-width: 200px; width: auto; }
+  .barra .contador { font-size: 0.82rem; font-weight: 700; color: var(--gris); margin-left: auto; }
+
+  /* ---------- tabla (desktop) ---------- */
+  .marco-tabla {
+    background: var(--blanco);
+    border: 1px solid var(--linea);
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--verde);
+    color: var(--blanco);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+    padding: 10px;
+    white-space: nowrap;
+  }
+  tbody td {
+    border-bottom: 1px solid var(--linea);
+    padding: 9px 10px;
+    font-size: 0.92rem;
+    vertical-align: top;
+  }
+  tbody tr:nth-child(even) td { background: #fafbf8; }
+  td.num { color: var(--gris); font-size: 0.8rem; }
+  td.fecha { color: var(--gris); font-size: 0.82rem; white-space: nowrap; }
+  .nombre-b { font-weight: 700; }
+  .sub-nombre { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+  .pill {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .p-nuevo      { background: #f6ecc8; color: #6b5600; }
+  .p-contactado { background: #dbe9f5; color: #1c4e7a; }
+  .p-visita     { background: #e8dff3; color: #4a2c74; }
+  .p-reservo    { background: #d9efdc; color: #1c6127; }
+  .p-compro     { background: var(--verde); color: #fff; }
+  .p-nosigue    { background: #eeeeea; color: #777; }
+  .btn-editar {
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--verde);
+    background: var(--blanco);
+    color: var(--verde);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-editar:hover { background: #eef2ec; }
+  .tabla-vacia {
+    padding: 34px 16px;
+    text-align: center;
+    color: var(--gris);
+    font-size: 0.95rem;
+  }
+
+  .pie {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .respaldo { font-size: 0.78rem; color: var(--gris); }
+  .respaldo button, .respaldo label {
+    font: inherit; font-size: 0.78rem;
+    background: none; border: none;
+    color: var(--gris); text-decoration: underline;
+    cursor: pointer; padding: 2px 4px;
+  }
+  .nota-pie { font-size: 0.78rem; color: var(--gris); margin-top: 6px; }
+
+  /* ================================================================
+     CELULAR (hasta 720px): el formulario apila y la tabla se vuelve
+     tarjetas. Sin scroll de costado, letra grande, botones a lo ancho.
+     ================================================================ */
+  @media (max-width: 720px) {
+    .grilla { grid-template-columns: 1fr; }
+    .grilla .ancho2 { grid-column: span 1; }
+    .duo { grid-template-columns: 125px 1fr; }
+    .btn { width: 100%; }
+    .acciones-panel .btn { width: 100%; }
+    .barra input[type=text], .barra select { max-width: none; width: 100%; }
+    .barra .contador { margin: 2px 0 0; }
+    .pie { flex-direction: column; align-items: stretch; }
+    .pie .acciones-panel { margin: 0; }
+    .respaldo { text-align: center; }
+
+    .marco-tabla { border: none; background: none; overflow: visible; }
+    table, tbody { display: block; width: 100%; }
+    thead { display: none; }
+    tbody tr {
+      display: block;
+      background: var(--blanco);
+      border: 1px solid var(--linea);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    tbody tr:nth-child(even) td { background: transparent; }
+    tbody td {
+      display: block;
+      border: none;
+      padding: 2px 0;
+      font-size: 0.95rem;
+    }
+    td.num { display: none; }
+    td[data-l]:not(:empty)::before {
+      content: attr(data-l) ": ";
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--gris);
+    }
+    td:empty { display: none; }
+    td .nombre-b { font-size: 1.1rem; }
+    .sub-nombre { margin: 6px 0 8px; }
+    .btn-editar { padding: 8px 22px; font-size: 0.9rem; }
+    td.fecha { margin-top: 4px; }
+  }
+
+  /* ---------- editor (ficha del interesado) ---------- */
+  .fondo-editor {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(25, 32, 22, 0.5);
+    z-index: 40;
+    padding: 16px 12px;
+    overflow-y: auto;
+  }
+  .fondo-editor.abierto { display: block; }
+  .editor {
+    background: var(--blanco);
+    border-radius: 10px;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 18px 16px;
+    border-top: 5px solid var(--verde);
+  }
+  .editor h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--verde);
+    margin-bottom: 14px;
+  }
+  .editor .grilla { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 720px) { .editor .grilla { grid-template-columns: 1fr; } }
+  .editor .estado-grande { margin-top: 12px; }
+  .editor .estado-grande select { font-weight: 700; }
+  .editor .botonera { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .editor .botonera .btn { flex: 1; min-width: 130px; }
+  .editor .cancelar {
+    font: inherit; font-size: 0.9rem;
+    background: none; border: none;
+    color: var(--gris); text-decoration: underline;
+    cursor: pointer; margin: 14px auto 0; display: block;
+    padding: 8px;
+  }
+  .editor .fecha-carga { font-size: 0.78rem; color: var(--gris); margin-top: 10px; }
+
+  /* ---------- impresión (PDF) ---------- */
+  .solo-print { display: none; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    header, main, .fondo-editor, .no-print { display: none !important; }
+    .solo-print { display: block !important; padding: 20px; }
+    .solo-print h1 { font-size: 18px; color: #1B5E20; font-weight: 700; }
+    .solo-print .sub-p { font-size: 11px; color: #555; margin: 4px 0 14px; }
+    .solo-print table { width: 100%; border-collapse: collapse; }
+    .solo-print th { background: #1B5E20 !important; color: #fff; text-align: left; padding: 7px 6px; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .solo-print td { padding: 6px; border-bottom: 1px solid #ccc; font-size: 10px; vertical-align: top; display: table-cell; }
+    .solo-print tr { display: table-row; }
+    .solo-print tr:nth-child(even) td { background: #f4f4ef; }
+  }
+</style>
+</head>
+<body>
+
+<header class="no-print">
+  <h1>CMD <span>— Interesados</span></h1>
+  <div class="sub">Compañía Misionera de Desarrollo · Planilla comercial</div>
+</header>
+
+<main class="no-print">
+
+  <!-- ============ CARGA ============ -->
+  <div class="panel">
+    <h2>Nuevo interesado</h2>
+    <div class="grilla">
+      <label class="campo"><span>Nombre y apellido <b>*</b></span>
+        <input type="text" id="f-nombre" placeholder="Carlos Gómez" autocomplete="off">
+      </label>
+      <label class="campo"><span>Teléfono / WhatsApp</span>
+        <input type="tel" id="f-tel" placeholder="3764 123456" autocomplete="off">
+      </label>
+      <label class="campo"><span>Red social <small>(si vino por ahí)</small></span>
+        <div class="duo">
+          <select id="f-red">
+            <option value="">—</option>
+            <option>Facebook</option>
+            <option>Instagram</option>
+          </select>
+          <input type="text" id="f-redusuario" placeholder="Usuario o nombre de perfil" autocomplete="off">
+        </div>
+      </label>
+      <label class="campo"><span>Activo de interés <b>*</b></span>
+        <select id="f-activo" onchange="actualizarDetalles('f')">
+          <option value="">— Elegir —</option>
+        </select>
+      </label>
+      <label class="campo"><span>Especificación</span>
+        <input type="text" id="f-detalle" list="detalles-f" placeholder="Lote, medida, modalidad..." autocomplete="off">
+        <datalist id="detalles-f"></datalist>
+      </label>
+      <label class="campo ancho2"><span>Observaciones</span>
+        <input type="text" id="f-nota" placeholder="Forma de pago, cuándo quiere visitar, referido por..." autocomplete="off">
+      </label>
+    </div>
+    <div class="acciones-panel">
+      <button class="btn" onclick="agregar()">Agregar a la planilla</button>
+      <span class="confirmacion" id="confirmacion">Agregado correctamente.</span>
+    </div>
+  </div>
+
+  <!-- ============ TABLA / TARJETAS ============ -->
+  <div class="barra">
+    <input type="text" id="buscar" placeholder="Buscar nombre, teléfono o red" oninput="pintar()">
+    <select id="filtro-activo" onchange="pintar()"><option value="">Todos los activos</option></select>
+    <select id="filtro-estado" onchange="pintar()"><option value="">Todos los estados</option></select>
+    <span class="contador" id="contador"></span>
+  </div>
+
+  <div class="marco-tabla">
+    <table id="tabla">
+      <thead>
+        <tr>
+          <th style="width:36px">N°</th>
+          <th style="min-width:210px">Nombre</th>
+          <th>Teléfono</th>
+          <th>Red social</th>
+          <th>Activo</th>
+          <th>Especificación</th>
+          <th>Observaciones</th>
+          <th style="width:80px">Fecha</th>
+        </tr>
+      </thead>
+      <tbody id="cuerpo"></tbody>
+    </table>
+    <div class="tabla-vacia" id="tabla-vacia" style="display:none">
+      La planilla está vacía. Cargá el primer interesado desde el panel de arriba.
+    </div>
+  </div>
+
+  <div class="pie">
+    <div class="acciones-panel" style="margin:0">
+      <button class="btn secundario" onclick="imprimirPDF()">Generar PDF</button>
+      <button class="btn secundario" onclick="compartirWhatsApp()">Enviar</button>
+    </div>
+    <div class="respaldo">
+      <button onclick="exportarJSON()">Descargar respaldo</button> ·
+      <label for="importar">Restaurar respaldo</label>
+      <input type="file" id="importar" accept=".json" style="display:none" onchange="importarJSON(event)">
+    </div>
+  </div>
+  <p class="nota-pie">Para cambiar el estado, corregir datos o eliminar a alguien: botón <b>Editar</b> junto al nombre.</p>
+</main>
+
+<!-- ============ FICHA / EDITOR ============ -->
+<div class="fondo-editor" id="fondo-editor" onclick="if(event.target===this) cerrarEditor()">
+  <div class="editor">
+    <h3>Ficha del interesado</h3>
+    <div class="grilla">
+      <label class="campo"><span>Nombre y apellido <b>*</b></span>
+        <input type="text" id="e-nombre" autocomplete="off">
+      </label>
+      <label class="campo"><span>Teléfono / WhatsApp</span>
+        <input type="tel" id="e-tel" autocomplete="off">
+      </label>
+      <label class="campo"><span>Red social</span>
+        <div class="duo">
+          <select id="e-red">
+            <option value="">—</option>
+            <option>Facebook</option>
+            <option>Instagram</option>
+          </select>
+          <input type="text" id="e-redusuario" placeholder="Usuario o perfil" autocomplete="off">
+        </div>
+      </label>
+      <label class="campo"><span>Activo de interés</span>
+        <select id="e-activo" onchange="actualizarDetalles('e')"></select>
+      </label>
+      <label class="campo"><span>Especificación</span>
+        <input type="text" id="e-detalle" list="detalles-e" autocomplete="off">
+        <datalist id="detalles-e"></datalist>
+      </label>
+      <label class="campo"><span>Observaciones</span>
+        <input type="text" id="e-nota" autocomplete="off">
+      </label>
+    </div>
+    <label class="campo estado-grande"><span>Estado del interesado</span>
+      <select id="e-estado"></select>
+    </label>
+    <div class="fecha-carga" id="e-fecha"></div>
+    <div class="botonera">
+      <button class="btn" onclick="guardarEditor()">Guardar cambios</button>
+      <button class="btn peligro" onclick="eliminarEditor()">Eliminar</button>
+    </div>
+    <button class="cancelar" onclick="cerrarEditor()">Cancelar y volver</button>
+  </div>
+</div>
+
+<div class="solo-print" id="zona-print"></div>
+
+<script>
+/* ================================================================
+   ACTIVOS DE CMD — para sumar un activo nuevo, agregalo a esta lista.
+   ================================================================ */
+const ACTIVOS = [
+  { nombre: "Solares de Loreto",
+    detalles: ["Lote 490 m² (USD 1.000 + 84 x USD 100)", "Lote 550 m² (USD 1.000 + 96 x USD 100)",
+               "Lote 780 m² (USD 1.500 + 120 x USD 130)", "Lote 1.250 m² (USD 2.000 + 120 x USD 200)",
+               "Esquina especial 906 m² (Mza 7)", "Manzana 2 (últimos de 1ª fase)", "Contado", "Financiado"] },
+  { nombre: "Terrenos Oberá",
+    detalles: ["Río Paraná 12x50 (USD 50.000)", "Lote Aeródromo 12,5x37,5 (USD 25.000)", "Lote Colectora 12,5x32,5 (USD 25.000)"] },
+  { nombre: "Deptos Aymará (Posadas)",
+    detalles: ["1 dormitorio 69 m² (USD 60.000)", "2 dormitorios", "Local planta baja 30 m²", "Terraza 630 m²"] },
+  { nombre: "Hectáreas",
+    detalles: ["Paso de los Libres, Ruta 117 (2 ha)", "San José, Ruta 14 (1,5 ha)"] },
+  { nombre: "Casa Ombú (Ituzaingó)",
+    detalles: ["Contado (USD 110.000)", "Financiado (entrega USD 60.000 + cuotas)"] },
+  { nombre: "Otro", detalles: [] },
+];
+
+const ESTADOS = [
+  { id: "nuevo",      nombre: "Nuevo" },
+  { id: "contactado", nombre: "Contactado" },
+  { id: "visita",     nombre: "Visita" },
+  { id: "reservo",    nombre: "Reservó" },
+  { id: "compro",     nombre: "Compró" },
+  { id: "nosigue",    nombre: "No sigue" },
+];
+
+const CLAVE = "cmd_interesados_v2";
+let datos = [];
+let editandoId = null;
+
+function cargarDatos() {
+  try { datos = JSON.parse(localStorage.getItem(CLAVE)) || []; }
+  catch (e) { datos = []; }
+}
+function persistir() { localStorage.setItem(CLAVE, JSON.stringify(datos)); }
+
+/* ---------------- selects ---------------- */
+function poblarSelects() {
+  const fa = document.getElementById("f-activo");
+  const ea = document.getElementById("e-activo");
+  const flt = document.getElementById("filtro-activo");
+  ACTIVOS.forEach(a => {
+    fa.add(new Option(a.nombre, a.nombre));
+    ea.add(new Option(a.nombre, a.nombre));
+    flt.add(new Option(a.nombre, a.nombre));
+  });
+  const fe = document.getElementById("filtro-estado");
+  const ee = document.getElementById("e-estado");
+  ESTADOS.forEach(e => {
+    fe.add(new Option(e.nombre, e.id));
+    ee.add(new Option(e.nombre, e.id));
+  });
+}
+function actualizarDetalles(prefijo) {
+  const act = ACTIVOS.find(a => a.nombre === document.getElementById(prefijo + "-activo").value);
+  const dl = document.getElementById("detalles-" + prefijo);
+  dl.innerHTML = "";
+  (act ? act.detalles : []).forEach(d => {
+    const o = document.createElement("option");
+    o.value = d;
+    dl.appendChild(o);
+  });
+}
+
+/* ---------------- alta ---------------- */
+function agregar() {
+  const nombre = document.getElementById("f-nombre").value.trim();
+  const activo = document.getElementById("f-activo").value;
+  if (!nombre) { alert("Falta el nombre del interesado."); return; }
+  if (!activo) { alert("Falta elegir el activo de interés."); return; }
+  datos.unshift({
+    id: Date.now(),
+    fecha: new Date().toISOString(),
+    nombre: nombre,
+    tel: document.getElementById("f-tel").value.trim(),
+    red: document.getElementById("f-red").value,
+    redUsuario: document.getElementById("f-redusuario").value.trim(),
+    activo: activo,
+    detalle: document.getElementById("f-detalle").value.trim(),
+    nota: document.getElementById("f-nota").value.trim(),
+    estado: "nuevo",
+  });
+  persistir();
+  ["f-nombre","f-tel","f-redusuario","f-detalle","f-nota"].forEach(i => document.getElementById(i).value = "");
+  document.getElementById("f-activo").value = "";
+  document.getElementById("f-red").value = "";
+  actualizarDetalles("f");
+  pintar();
+  const c = document.getElementById("confirmacion");
+  c.style.display = "inline";
+  setTimeout(() => { c.style.display = "none"; }, 2200);
+}
+
+/* ---------------- tabla ---------------- */
+function fechaCorta(iso) {
+  const d = new Date(iso);
+  return d.getDate().toString().padStart(2,"0") + "/" + (d.getMonth()+1).toString().padStart(2,"0") + "/" + d.getFullYear().toString().slice(2);
+}
+function esc(t) {
+  return (t || "").replace(/[<>&"]/g, c => ({ "<":"&lt;", ">":"&gt;", "&":"&amp;", '"':"&quot;" }[c]));
+}
+function redTexto(r) {
+  if (!r.red && !r.redUsuario) return "";
+  return (r.red ? r.red + ": " : "") + (r.redUsuario || "");
+}
+function filtrados() {
+  const q = (document.getElementById("buscar").value || "").toLowerCase();
+  const fa = document.getElementById("filtro-activo").value;
+  const fe = document.getElementById("filtro-estado").value;
+  return datos.filter(r =>
+    (!fa || r.activo === fa) &&
+    (!fe || r.estado === fe) &&
+    (!q || r.nombre.toLowerCase().includes(q) || (r.tel || "").includes(q) ||
+     (r.redUsuario || "").toLowerCase().includes(q))
+  );
+}
+
+function pintar() {
+  const rs = filtrados();
+  document.getElementById("tabla-vacia").style.display = rs.length ? "none" : "block";
+  document.getElementById("contador").textContent =
+    rs.length + " de " + datos.length + " interesados";
+
+  const cuerpo = document.getElementById("cuerpo");
+  cuerpo.innerHTML = "";
+  rs.forEach((r, i) => {
+    const est = ESTADOS.find(e => e.id === r.estado) || ESTADOS[0];
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td class="num">' + (i + 1) + "</td>" +
+      '<td><span class="nombre-b">' + esc(r.nombre) + '</span>' +
+      '<div class="sub-nombre"><span class="pill p-' + r.estado + '">' + est.nombre + "</span>" +
+      '<button class="btn-editar" onclick="abrirEditor(' + r.id + ')">Editar</button></div></td>' +
+      '<td data-l="Teléfono">' + esc(r.tel || "") + "</td>" +
+      '<td data-l="Red">' + esc(redTexto(r)) + "</td>" +
+      '<td data-l="Activo">' + esc(r.activo) + "</td>" +
+      '<td data-l="Especificación">' + esc(r.detalle || "") + "</td>" +
+      '<td data-l="Obs">' + esc(r.nota || "") + "</td>" +
+      '<td class="fecha" data-l="Fecha">' + fechaCorta(r.fecha) + "</td>";
+    cuerpo.appendChild(tr);
+  });
+}
+
+/* ---------------- editor ---------------- */
+function abrirEditor(id) {
+  const r = datos.find(x => x.id === id);
+  if (!r) return;
+  editandoId = id;
+  document.getElementById("e-nombre").value = r.nombre;
+  document.getElementById("e-tel").value = r.tel || "";
+  document.getElementById("e-red").value = r.red || "";
+  document.getElementById("e-redusuario").value = r.redUsuario || "";
+  document.getElementById("e-activo").value = r.activo;
+  actualizarDetalles("e");
+  document.getElementById("e-detalle").value = r.detalle || "";
+  document.getElementById("e-nota").value = r.nota || "";
+  document.getElementById("e-estado").value = r.estado;
+  document.getElementById("e-fecha").textContent = "Cargado el " + fechaCorta(r.fecha);
+  document.getElementById("fondo-editor").classList.add("abierto");
+}
+function cerrarEditor() {
+  editandoId = null;
+  document.getElementById("fondo-editor").classList.remove("abierto");
+}
+function guardarEditor() {
+  const r = datos.find(x => x.id === editandoId);
+  if (!r) return;
+  const nombre = document.getElementById("e-nombre").value.trim();
+  if (!nombre) { alert("El nombre no puede quedar vacío."); return; }
+  r.nombre = nombre;
+  r.tel = document.getElementById("e-tel").value.trim();
+  r.red = document.getElementById("e-red").value;
+  r.redUsuario = document.getElementById("e-redusuario").value.trim();
+  r.activo = document.getElementById("e-activo").value;
+  r.detalle = document.getElementById("e-detalle").value.trim();
+  r.nota = document.getElementById("e-nota").value.trim();
+  r.estado = document.getElementById("e-estado").value;
+  persistir();
+  cerrarEditor();
+  pintar();
+}
+function eliminarEditor() {
+  const r = datos.find(x => x.id === editandoId);
+  if (!r) return;
+  if (confirm("¿Eliminar a " + r.nombre + " de la planilla? Esta acción no se puede deshacer.")) {
+    datos = datos.filter(x => x.id !== editandoId);
+    persistir();
+    cerrarEditor();
+    pintar();
+  }
+}
+
+/* ---------------- PDF ---------------- */
+function imprimirPDF() {
+  const rs = filtrados();
+  const hoy = new Date();
+  const f = hoy.getDate() + "/" + (hoy.getMonth() + 1) + "/" + hoy.getFullYear();
+  const fa = document.getElementById("filtro-activo").value;
+  const fe = document.getElementById("filtro-estado").value;
+  let filtroTxt = [];
+  if (fa) filtroTxt.push("Activo: " + fa);
+  if (fe) filtroTxt.push("Estado: " + (ESTADOS.find(e => e.id === fe) || {}).nombre);
+  const filas = rs.map((r, i) => {
+    const est = ESTADOS.find(e => e.id === r.estado) || ESTADOS[0];
+    return "<tr><td>" + (i + 1) + "</td><td><b>" + esc(r.nombre) + "</b></td><td>" + esc(r.tel || "-") +
+      "</td><td>" + esc(redTexto(r) || "-") + "</td><td>" + esc(r.activo) + "</td><td>" + esc(r.detalle || "-") +
+      "</td><td>" + esc(r.nota || "-") + "</td><td>" + fechaCorta(r.fecha) + "</td><td>" + est.nombre + "</td></tr>";
+  }).join("");
+  document.getElementById("zona-print").innerHTML =
+    "<h1>CMD — Listado de interesados</h1>" +
+    '<div class="sub-p">Compañía Misionera de Desarrollo · ' + f + " · " + rs.length + " interesados" +
+    (filtroTxt.length ? " · " + filtroTxt.join(" · ") : "") + "</div>" +
+    "<table><tr><th>N°</th><th>Nombre</th><th>Teléfono</th><th>Red social</th><th>Activo</th><th>Especificación</th><th>Observaciones</th><th>Fecha</th><th>Estado</th></tr>" +
+    filas + "</table>";
+  window.print();
+}
+
+/* ---------------- compartir ---------------- */
+function compartirWhatsApp() {
+  const rs = filtrados();
+  if (!rs.length) { alert("No hay interesados para enviar."); return; }
+  let t = "*CMD - INTERESADOS* (" + rs.length + ")\n\n";
+  rs.forEach((r, i) => {
+    t += (i + 1) + ". *" + r.nombre + "*" + (r.tel ? " - " + r.tel : "") +
+         (redTexto(r) ? " - " + redTexto(r) : "") +
+         "\n    " + r.activo + (r.detalle ? " | " + r.detalle : "") + "\n";
+  });
+  window.open("https://wa.me/?text=" + encodeURIComponent(t), "_blank");
+}
+
+/* ---------------- respaldo ---------------- */
+function exportarJSON() {
+  const blob = new Blob([JSON.stringify(datos, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  const hoy = new Date();
+  a.download = "cmd-interesados-" + hoy.getFullYear() + "-" + (hoy.getMonth() + 1) + "-" + hoy.getDate() + ".json";
+  a.click();
+}
+function importarJSON(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      const nuevos = JSON.parse(fr.result);
+      if (!Array.isArray(nuevos)) throw new Error("formato");
+      let sumados = 0;
+      nuevos.forEach(n => {
+        if (n && n.id && !datos.find(x => x.id === n.id)) { datos.push(n); sumados++; }
+      });
+      datos.sort((a, b) => b.id - a.id);
+      persistir();
+      pintar();
+      alert("Respaldo restaurado: " + sumados + " interesados sumados.");
+    } catch (e) { alert("Ese archivo no es un respaldo valido."); }
+  };
+  fr.readAsText(file);
+}
+
+/* ---------------- arranque ---------------- */
+cargarDatos();
+poblarSelects();
+pintar();
+</script>
+</body>
+</html>
